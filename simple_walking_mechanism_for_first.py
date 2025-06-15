@@ -2,17 +2,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# class GaitMechanism:
+class GaitMechanism:
 
-#     def __init__(self, clock, swing_phase):
-#         self.clock = clock
-#         self.swing_phase = swing_phase
-#         self.stance_phase = 1 - self.swing_phase
+    def __init__(self, clock, swing_phase):
+        self.clock = clock
+        self.swing_phase = swing_phase
+        self.stance_phase = 1 - self.swing_phase
 
-#     def get_current_phase(self):
-#         pass
+    def get_current_phase(self):
+        pass
 
 
+LEG1 = 100
+LEG2 = 156
+PIVOTx = 30
+PIVOTy = 150
+START = (50, -25)
+STEP_LENGTH = 100
 
 
 class WalkingMechanism:
@@ -40,9 +46,9 @@ class WalkingMechanism:
         self.ax.plot([self.elbowX, self.wristX], [self.elbowY, self.wristY], 'ro-', linewidth=4)
         self.ax.plot(x, y, 'gx', markersize=10, label='Foot')
         self.ax.text(0, 180, f"x: {x:.2f}, y: {y:.2f}\nα: {np.rad2deg(self.alpha):.1f}, β: {np.rad2deg(self.beta):.1f}")
-        self.ax.axhline(90, color='gray', linestyle='--')
-        self.ax.set_xlim(0, 200)
-        self.ax.set_ylim(0, 200)
+        self.ax.axhline(-25, color='gray', linestyle='--')
+        self.ax.set_xlim(-200, 200)
+        self.ax.set_ylim(-200, 200)
         self.ax.set_aspect('equal')
         self.ax.legend()
         self.fig.canvas.draw_idle()
@@ -95,7 +101,10 @@ class WalkingMechanism:
         self.wristX = self.elbowX + self.arm2 * np.cos(self.alpha + self.beta)
         self.wristY = self.elbowY + self.arm2 * np.sin(self.alpha + self.beta)
 
-        self.subplots(x, y, pX, pY)
+        self.alpha = np.rad2deg(self.alpha)
+        self.beta = np.rad2deg(self.beta)
+        return [f"{self.alpha.item()}", f"{self.beta.item()}", f"{0}"]
+        # self.subplots(x, y, pX, pY)
 
     def swing_phase(self):
         swing_x, swing_y = self.cycloidal_between()
@@ -140,38 +149,44 @@ class LegMovement():
 
     def start(self):
 
-        while 1:
-        # Swing Phase
-            firstLegswingX, firstLegswingY, firstpivotX, firstpivotY = self.legs[0].swing_phase()
-            thirdLegswingX, thirdLegswingY, thirdpivotX, thirdpivotY = self.legs[2].swing_phase()
 
-            for (a1, b1, a2, b2,) in zip(firstLegswingX, firstLegswingY, thirdLegswingX, thirdLegswingY):
+        steps = 0
+        mylst = []
+
+
+        while 1:
+            current_phase = steps%4
+            a, b, c, d = current_phase, (current_phase+1)%4, (current_phase+2)%4, (current_phase+3)%4
+        # Swing Phase
+            firstLegswingX, firstLegswingY, firstpivotX, firstpivotY = self.legs[a].swing_phase()
+            # Stance Phase
+            secondLegswingX, secondLegswingY, secondpivotX, secondpivotY = self.legs[b].stance_phase()
+            thirdLegswingX, thirdLegswingY, thirdpivotX, thirdpivotY = self.legs[c].stance_phase()
+            fourthLegswingX, fourthLegswingY, fourthpivotX, fourthpivotY = self.legs[d].stance_phase()
+
+            for (a1, b1, a2, b2, a3, b3, a4, b4) in zip(firstLegswingX, firstLegswingY, secondLegswingX, secondLegswingY, thirdLegswingX, thirdLegswingY, fourthLegswingX, fourthLegswingY):
 
             #     # self.ik(x, y, self.pivotX, self.pivotY)  #ELBOW DOWN
-                self.legs[0].ik(a1, b1, firstpivotX, firstpivotY)
-                self.legs[2].ik(a2, b2, thirdpivotX, thirdpivotY)
-                plt.pause(0.01)
+                mylst.extend(self.legs[a].ik(a1, b1, firstpivotX, firstpivotY))
+                mylst.extend(self.legs[b].ik(a2, b2, secondpivotX, secondpivotY))
+                mylst.extend(self.legs[c].ik(a3, b3, thirdpivotX, thirdpivotY))
+                mylst.extend(self.legs[d].ik(a4, b4, fourthpivotX, fourthpivotY))
+                
+                command = f"<{','.join(mylst)}>"
+                print(command)
+                # print(f"{','.join(mylst)}")
+                # plt.pause(0.01)
 
-            
-            # Stance Phase
-            secondLegswingX, secondLegswingY, secondpivotX, secondpivotY = self.legs[1].stance_phase()
-            fourthLegswingX, fourthLegswingY, fourthpivotX, fourthpivotY = self.legs[3].stance_phase()
-
-            for (a1, b1, a2, b2) in zip(secondLegswingX, secondLegswingY, fourthLegswingX, fourthLegswingY):
-
-            # self.ik(self.x0, self.y0, px, py)   # ELBOW DOWN
-                self.legs[1].ik(secondpivotX, secondpivotY, a1, b1)
-                self.legs[3].ik(fourthpivotX, fourthpivotY, a2, b2)
-                plt.pause(0.01)
+            steps += 1
 
 
 
 
 fig, ax = plt.subplots(2, 2)
-wm = [WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][0], fig, 0),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][1], fig, 1),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][0], fig, 1),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][1], fig, 0),
+wm = [WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][0], fig, 0),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][1], fig, 1),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][0], fig, 1),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][1], fig, 0),
     ]
 
 
