@@ -1,9 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+# class GaitMechanism:
+
+#     def __init__(self, clock, swing_phase):
+#         self.clock = clock
+#         self.swing_phase = swing_phase
+#         self.stance_phase = 1 - self.swing_phase
+
+#     def get_current_phase(self):
+#         pass
+
+
+
+
 class WalkingMechanism:
 
-    def __init__(self, arm1, arm2, pivotX, pivotY, start, step_length, ax, fig):
+    def __init__(self, arm1, arm2, pivotX, pivotY, start, step_length, ax, fig, offset):
         self.arm1 = arm1
         self.arm2 = arm2
         self.pivotX = pivotX
@@ -13,6 +27,8 @@ class WalkingMechanism:
         self.ax = ax
         self.is_animating = False
         self.fig = fig
+        self.offset = offset
+        self.current_phase = 0
 
         self.cycloidal_between()
 
@@ -34,7 +50,7 @@ class WalkingMechanism:
 
 
     """Cyclodial Path for forward Movement"""
-    def cycloidal_between(self, steps=15, lift_ratio=0.5):
+    def cycloidal_between(self, steps=30, lift_ratio=0.5):
         t = np.linspace(0, 1, steps)
 
         dx, dy = self.step_length, 0
@@ -46,14 +62,16 @@ class WalkingMechanism:
         return x, y
 
     """Bobbing Shape"""
-    def stance_phase_fixed_foot(self, steps=15):
+    def stance_phase_fixed_pivot(self, steps=30):
         t = np.linspace(0, 1, steps)
-        pivot_x = (1 - t) * self.pivotX + t * (self.pivotX + self.step_length)
+        
+        pivot_x = (1 - t) * (self.x0 + self.step_length) + t * self.x0
 
-        vertical_bob = 3 * np.sin(np.pi * t)  
-        pivot_y = (1 - t) * self.pivotY + t * self.pivotY + vertical_bob
+        vertical_bob = 3 * np.sin(np.pi * t)
+        pivot_y = self.y0 + vertical_bob
 
         return pivot_x, pivot_y
+
 
     def ik(self, x, y, pX, pY):
         dx, dy = x - pX, y - pY
@@ -79,50 +97,85 @@ class WalkingMechanism:
 
         self.subplots(x, y, pX, pY)
 
-    
-    def working_pipeline(self):
-        if self.is_animating:
-            return
-        self.is_animating = True
-
-
+    def swing_phase(self):
         swing_x, swing_y = self.cycloidal_between()
-        for x, y in zip(swing_x, swing_y):
-            # x_slider.set_val(x)
-            # y_slider.set_val(y)
-            # self.ik(x, y, self.pivotX, self.pivotY)  #ELBOW DOWN
-            self.ik(self.pivotX, self.pivotY, x, y)   #ELBOW UP
-            plt.pause(0.01)
 
-        self.x0 += self.step_length
-        self.y0 = self.y0
+        return swing_x, swing_y, self.pivotX, self.pivotY
+        # for x, y in zip(swing_x, swing_y):
+        #     # x_slider.set_val(x)
+        #     # y_slider.set_val(y)
+        #     # self.ik(x, y, self.pivotX, self.pivotY)  #ELBOW DOWN
+        #     self.ik(self.pivotX, self.pivotY, x, y)   #ELBOW UP
+        #     plt.pause(0.01)
 
-        stance_pivot_x, stance_pivot_y = self.stance_phase_fixed_foot()
-        for px, py in zip(stance_pivot_x, stance_pivot_y):
-            # x_slider.set_val(self.x0 + s[0])
-            # y_slider.set_val(end_foot[1])
-            self.ik(px, py, self.x0, self.y0)      #ELBOW UP
+        # self.x0 += self.step_length
+        # self.y0 = self.y0
+
+
+    def stance_phase(self):
+        stance_pivot_x, stance_pivot_y = self.stance_phase_fixed_pivot()
+        return stance_pivot_x, stance_pivot_y, self.pivotX, self.pivotY
+        # for px, py in zip(stance_pivot_x, stance_pivot_y):
+        #     # x_slider.set_val(self.x0 + s[0])
+        #     # y_slider.set_val(end_foot[1])
+        #     self.ik(px, py, self.x0, self.y0)      #ELBOW UP
+        #     # self.ik(self.x0, self.y0, px, py)   # ELBOW DOWN
+        #     plt.pause(0.01)
+
+
+    def working_pipeline(self, global_step):
+
+        if (global_step + self.offset) % 2 == 0:
+            self.swing_phase()
+
+        else:
+            self.stance_phase()
+
+
+class LegMovement():
+
+    def __init__(self, legs):
+        self.legs = legs
+
+
+    def start(self):
+
+        while 1:
+        # Swing Phase
+            firstLegswingX, firstLegswingY, firstpivotX, firstpivotY = self.legs[0].swing_phase()
+            thirdLegswingX, thirdLegswingY, thirdpivotX, thirdpivotY = self.legs[2].swing_phase()
+
+            for (a1, b1, a2, b2,) in zip(firstLegswingX, firstLegswingY, thirdLegswingX, thirdLegswingY):
+
+            #     # self.ik(x, y, self.pivotX, self.pivotY)  #ELBOW DOWN
+                self.legs[0].ik(a1, b1, firstpivotX, firstpivotY)
+                self.legs[2].ik(a2, b2, thirdpivotX, thirdpivotY)
+                plt.pause(0.01)
+
+            
+            # Stance Phase
+            secondLegswingX, secondLegswingY, secondpivotX, secondpivotY = self.legs[1].stance_phase()
+            fourthLegswingX, fourthLegswingY, fourthpivotX, fourthpivotY = self.legs[3].stance_phase()
+
+            for (a1, b1, a2, b2) in zip(secondLegswingX, secondLegswingY, fourthLegswingX, fourthLegswingY):
+
             # self.ik(self.x0, self.y0, px, py)   # ELBOW DOWN
-            plt.pause(0.01)
+                self.legs[1].ik(secondpivotX, secondpivotY, a1, b1)
+                self.legs[3].ik(fourthpivotX, fourthpivotY, a2, b2)
+                plt.pause(0.01)
 
-        self.pivotX += self.step_length
-        self.pivotY = self.pivotY
-
-        self.is_animating = False
 
 
 
 fig, ax = plt.subplots(2, 2)
-wm = [WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][0], fig),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][1], fig),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][0], fig),
-      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][1], fig),
+wm = [WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][0], fig, 0),
+      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[0][1], fig, 1),
+      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][0], fig, 1),
+      WalkingMechanism(40, 40, 50, 150, (50, 90), 20, ax[1][1], fig, 0),
     ]
 
-while 1:
-    for i in range(4):
 
-
-        wm[i].working_pipeline()
+Lm = LegMovement(wm)
+Lm.start()
 
 
