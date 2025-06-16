@@ -103,7 +103,7 @@ class WalkingMechanism:
 
         self.alpha = np.rad2deg(self.alpha)
         self.beta = np.rad2deg(self.beta)
-        return [f"{self.alpha.item()}", f"{self.beta.item()}", f"{0}"]
+        return [f"{int(self.alpha.item())}", f"{int(self.beta.item())}", f"{0}"]
         # self.subplots(x, y, pX, pY)
 
     def swing_phase(self):
@@ -151,7 +151,7 @@ class LegMovement():
 
 
         steps = 0
-        mylst = []
+        # mylst = []
 
 
         while 1:
@@ -166,16 +166,25 @@ class LegMovement():
 
             for (a1, b1, a2, b2, a3, b3, a4, b4) in zip(firstLegswingX, firstLegswingY, secondLegswingX, secondLegswingY, thirdLegswingX, thirdLegswingY, fourthLegswingX, fourthLegswingY):
 
-            #     # self.ik(x, y, self.pivotX, self.pivotY)  #ELBOW DOWN
-                mylst.extend(self.legs[a].ik(a1, b1, firstpivotX, firstpivotY))
-                mylst.extend(self.legs[b].ik(a2, b2, secondpivotX, secondpivotY))
-                mylst.extend(self.legs[c].ik(a3, b3, thirdpivotX, thirdpivotY))
-                mylst.extend(self.legs[d].ik(a4, b4, fourthpivotX, fourthpivotY))
-                
-                command = f"<{','.join(mylst)}>"
-                print(command)
+                mylst = [None] * 4
+
+                angles_a = self.legs[a].ik(a1, b1, firstpivotX, firstpivotY)
+                angles_b = self.legs[b].ik(a2, b2, secondpivotX, secondpivotY)
+                angles_c = self.legs[c].ik(a3, b3, thirdpivotX, thirdpivotY)
+                angles_d = self.legs[d].ik(a4, b4, fourthpivotX, fourthpivotY)
+
+                mylst[a] = angles_a
+                mylst[b] = angles_b
+                mylst[c] = angles_c
+                mylst[d] = angles_d
+
+                mine_list = [angle for leg_angles in mylst for angle in leg_angles]
+                command = f"<{','.join(mine_list)}>"
+                print(f"{command}")
+
+                # exit()
                 # print(f"{','.join(mylst)}")
-                # plt.pause(0.01)
+                plt.pause(0.01)
 
             steps += 1
 
