@@ -43,7 +43,6 @@ class WalkingMechanism:
     def subplots(self, x, y, pX, pY):
 
         self.ax.clear()
-        self.ax.plot(x, y)
         self.ax.plot([pX, self.elbowX], [pY, self.elbowY], 'ro-', linewidth=4, label='Arm')
         self.ax.plot([self.elbowX, self.wristX], [self.elbowY, self.wristY], 'ro-', linewidth=4)
         self.ax.plot(x, y, 'gx', markersize=10, label='Foot')
@@ -57,7 +56,7 @@ class WalkingMechanism:
 
 
     
-    def elliptical_path(self, a, b):
+    def elliptical_path(self):
         
         swing_path = np.linspace(np.pi, 0,self.swing_steps)
         stance_path = np.linspace(0, -np.pi, self.stance_steps)
@@ -92,6 +91,7 @@ class WalkingMechanism:
 
         self.subplots(x, y, pX, pY)
 
+
     def swing_phase(self):
         swing_x, swing_y = self.cycloidal_between()
 
@@ -122,8 +122,8 @@ class LegMovement():
     def start(self):
         steps = 0
         while True:
-
-            leg_trajectories = [leg.elliptical_path(a=10, b=7) for leg in self.legs]
+            
+            leg_trajectories = [leg.elliptical_path() for leg in self.legs]
 
             leg_positions = []
             for i, (x_path, y_path) in enumerate(leg_trajectories):
@@ -134,7 +134,7 @@ class LegMovement():
                 x, y = leg_positions[i]
                 self.legs[i].ik(x, y, self.legs[i].pivotX, self.legs[i].pivotY)
 
-            plt.pause(0.1)
+            plt.pause(0.01)
             steps += 1
 
 
