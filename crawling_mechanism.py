@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+
 class GaitMechanism:
 
     def __init__(self, clock, swing_phase):
@@ -28,7 +29,7 @@ class WalkingMechanism:
         self.arm2 = arm2
         self.pivotX = pivotX
         self.pivotY = pivotY
-        self.x0, self.y0 = start[0], start[1]
+        self.x1, self.y1 = start[0], start[1]
         self.step_lengthX = step_length
         self.step_lengthY = 10
         self.ax = ax
@@ -58,12 +59,17 @@ class WalkingMechanism:
     
     def elliptical_path(self):
         
-        swing_path = np.linspace(np.pi, 0,self.swing_steps)
-        stance_path = np.linspace(0, -np.pi, self.stance_steps)
-        theta = np.concatenate([swing_path, stance_path])
+        swing_theta = np.linspace(np.pi, 0, self.swing_steps)
+        swing_x = self.x1 + (self.step_lengthX / 2) * np.cos(swing_theta)
+        swing_y = self.y1 + self.step_lengthY * np.sin(swing_theta)
 
-        x = self.x0 + self.step_lengthX/2 + self.step_lengthX * np.cos(theta)
-        y = self.y0 + self.step_lengthY/2 + self.step_lengthY * np.sin(theta)
+        stance_x = np.linspace(self.x1 + self.step_lengthX / 2,self.x1 - self.step_lengthX / 2, self.stance_steps)
+        stance_y = np.full(self.stance_steps, self.y1)
+
+        x = np.concatenate([swing_x, stance_x])
+        y = np.concatenate([swing_y, stance_y])
+
+        print(x)
 
         return x, y
 
@@ -104,14 +110,6 @@ class WalkingMechanism:
 
 
 
-    def working_pipeline(self, global_step):
-
-        if (global_step + self.offset) % 2 == 0:
-            self.swing_phase()
-
-        else:
-            self.stance_phase()
-
 
 class LegMovement():
 
@@ -144,10 +142,10 @@ class LegMovement():
 
 fig, ax = plt.subplots(2, 2, figsize = (12, 10))
 fig
-wm = [WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][0], fig, 0),
-      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][1], fig, 1),
-      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][0], fig, 2),
-      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][1], fig, 3),
+wm = [WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][1], fig, 0),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][1], fig, 2),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[0][0], fig, 1),
+      WalkingMechanism(LEG1, LEG2, PIVOTx, PIVOTy, START, STEP_LENGTH, ax[1][0], fig, 3),
     ]
 
 
